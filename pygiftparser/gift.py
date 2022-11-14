@@ -23,22 +23,22 @@ class QuestionFactory(object):
         """
         p = re.compile(r'^::(.+)::(.+)$')
         m = p.match(raw_text)
-        name = m.group(1).strip() if m and m.group(1) else raw_text
+        name = m[1].strip() if m and m[1] else raw_text
         name = name\
-            .replace("\\:", ":")\
-            .replace("\\~", "~")\
-            .replace("\\=", "=")\
-            .replace("\\#", "#")\
-            .replace("\\{", "{")\
-            .replace("\\}", "}")
-        text = m.group(2).strip() if m and m.group(2) else raw_text
+                .replace("\\:", ":")\
+                .replace("\\~", "~")\
+                .replace("\\=", "=")\
+                .replace("\\#", "#")\
+                .replace("\\{", "{")\
+                .replace("\\}", "}")
+        text = m[2].strip() if m and m[2] else raw_text
         text = text\
-            .replace("\\:", ":")\
-            .replace("\\~", "~")\
-            .replace("\\=", "=")\
-            .replace("\\#", "#")\
-            .replace("\\{", "{")\
-            .replace("\\}", "}")
+                .replace("\\:", ":")\
+                .replace("\\~", "~")\
+                .replace("\\=", "=")\
+                .replace("\\#", "#")\
+                .replace("\\{", "{")\
+                .replace("\\}", "}")
         return Question(
             name=name, text=text, answer=answer, text_continue=text_continue, category=category
         )
@@ -53,15 +53,15 @@ class AnswerFactory(object):
         :list options: the options.
         :ret:          returns the answer.
         """
-        if options == None:
+        if options is None:
             return Description()
 
         if TrueFalse.is_answer(options):
             return TrueFalse(options=options)
-        
+
         if Matching.is_answer(options):
             return Matching(options=options)
-        
+
         if Short.is_answer(options):
             return Short(options=options)
 
@@ -85,16 +85,16 @@ class AnswerFactory(object):
 
         raise SemanticError(
                 'AnswerFactory.build: Semantic error in the options: "' + \
-                ', '.join(list(map(lambda o: o.raw_text, options))) + '"')
+                    ', '.join(list(map(lambda o: o.raw_text, options))) + '"')
 
 
 class Question:
     def __init__(self, *args, **kwargs):
-        self.name = kwargs.get('name', None)
-        self.text = kwargs.get('text', None)
-        self.text_continue = kwargs.get('text_continue', None)
-        self.answer = kwargs.get('answer', None)
-        self.category = kwargs.get('category', None)
+        self.name = kwargs.get('name')
+        self.text = kwargs.get('text')
+        self.text_continue = kwargs.get('text_continue')
+        self.answer = kwargs.get('answer')
+        self.category = kwargs.get('category')
 
 
     def is_missing_word(self):
@@ -104,8 +104,15 @@ class Question:
     def __str__(self):
         res = 'Question: '
         if self.name:
-            res = res + self.name
-        res = res + '\n' + 'Text: ' + self.text + ('_______' + self.text_continue if self.text_continue else '')
+            res += self.name
+        res = (
+            res
+            + '\n'
+            + 'Text: '
+            + self.text
+            + (f'_______{self.text_continue}' if self.text_continue else '')
+        )
+
         if self.category:
             res = res + '\n' + 'Category: ' + self.category
         else:
@@ -139,38 +146,34 @@ class Answer(ABC):
 
 class Option:
     def __init__(self, *args, **kwargs):
-        self.feedback = kwargs.get('feedback', None)
-        self.raw_text = kwargs.get('text', None)
+        self.feedback = kwargs.get('feedback')
+        self.raw_text = kwargs.get('text')
         self.prefix, self.text, self.percentage = self._extract_parts(self.raw_text)
 
 
     def _extract_parts(self, raw_text):
-        if raw_text:
-            pattern = re.compile(r'^[#=~](%(-{0,1}[0-9]+)%)?(.+)$')
-            match = pattern.match(raw_text)
-            if match:
-                prefix = raw_text[0]
-                text = match.group(3)
-                if match.group(2):
-                    percentage = int(match.group(2))/100
-                elif prefix == '=' or prefix == '#':
-                    percentage  = 1.0
-                else:
-                    percentage = 0.0
-                return prefix, text, percentage
-            else:
-                return None, raw_text, 1.0
-        return None, None, None
+        if not raw_text:
+            return None, None, None
+        pattern = re.compile(r'^[#=~](%(-{0,1}[0-9]+)%)?(.+)$')
+        if not (match := pattern.match(raw_text)):
+            return None, raw_text, 1.0
+        prefix = raw_text[0]
+        text = match[3]
+        if match[2]:
+            percentage = int(match[2]) / 100
+        elif prefix in ['=', '#']:
+            percentage  = 1.0
+        else:
+            percentage = 0.0
+        return prefix, text, percentage
 
 
     def __str__(self):
         if self.feedback:
-            res = 'Option: ' + self.text + ' [' + str(self.percentage) + ']' \
-                + ' (' + self.feedback + ')'
+            res = f'Option: {self.text} [{str(self.percentage)}] ({self.feedback})'
         else:
-            res = 'Option: ' + self.text + ' [' + str(self.percentage) + ']'
-        res = '(' + self.prefix + ') ' + res if self.prefix else res
-        return res
+            res = f'Option: {self.text} [{str(self.percentage)}]'
+        return f'({self.prefix}) {res}' if self.prefix else res
 
 
 class TrueFalse(Answer):
@@ -191,8 +194,7 @@ class Matching(Answer):
 
 
     def get_pair(self, option: Option) -> dict:
-        match = self.PATTERN.match(option.text)
-        if match:
+        if match := self.PATTERN.match(option.text):
             return({
                 'first': match.group(1).strip(),
                 'second': match.group(2).strip()
@@ -267,8 +269,8 @@ class Range(Answer):
         if self.options:
             nums = self.options[0].text.split('..')
             if len(nums) == 2:
-                opt1 = [ Option(text='#' + nums[0]) ]
-                opt2 = [ Option(text='#' + nums[1]) ]
+                opt1 = [Option(text=f'#{nums[0]}')]
+                opt2 = [Option(text=f'#{nums[1]}')]
                 if Numerical.is_answer(opt1) and Numerical.is_answer(opt2):
                     self.number_from = Numerical(options=opt1)
                     self.number_to = Numerical(options=opt2)
@@ -321,10 +323,10 @@ class MultipleNumerical(Answer):
 
     @staticmethod
     def is_multiple(options: list) -> bool:
-        for o in options:
-            if not Numerical.is_numerical(o.text) and not Range.is_range(o.text):
-                return False
-        return True
+        return not any(
+            not Numerical.is_numerical(o.text) and not Range.is_range(o.text)
+            for o in options
+        )
 
 
 class MultipleChoiceRadio(Answer):
@@ -359,7 +361,7 @@ class Essay(Answer):
 
     @staticmethod
     def is_answer(options: list) -> bool:
-        return len(options) == 0
+        return not options
 
 
 class Description(Answer):
@@ -369,4 +371,4 @@ class Description(Answer):
 
     @staticmethod
     def is_answer(options: list) -> bool:
-        return options == None
+        return options is None

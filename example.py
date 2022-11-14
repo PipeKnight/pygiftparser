@@ -6,8 +6,7 @@ def parse_input_arguments():
     parser = argparse.ArgumentParser(description='GIFT Moodle file parser.')
     parser.add_argument('-f', '--file', dest='file', required=True,
                         help='GIFT Moodle file.')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 args = parse_input_arguments()

@@ -20,7 +20,7 @@ def preprocess(s):
                 res = res + '\n'
         else:
             if num_newlines == 1:
-                res = res + ' '
+                res = f'{res} '
             num_newlines = 0
             c = ' ' if c == '\t' else c
             res = res + c

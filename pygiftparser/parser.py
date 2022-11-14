@@ -180,12 +180,18 @@ def p_expression_numerical(p):
     elif len(p) == 2 and isinstance(p[1], str):
         p[0] = [ gift.Option(text=p[1].strip()) ]
     elif len(p) == 2 and isinstance(p[1], list):
-        p[0] =  [ gift.Option(text='#' + opt.raw_text[1:], feedback=opt.feedback) for opt in p[1] ]
+        p[0] = [
+            gift.Option(text=f'#{opt.raw_text[1:]}', feedback=opt.feedback)
+            for opt in p[1]
+        ]
 
 
 def p_error(p):
     if p:
-        print(f"Syntax error at '{p.value}' in question number {len(gift_result.questions) + 1}. " + str(p))
+        print(
+            f"Syntax error at '{p.value}' in question number {len(gift_result.questions) + 1}. {str(p)}"
+        )
+
         raise Exception(f"Syntax error at '{p.value}' in question number {len(gift_result.questions) + 1}.")
     else:
         print('Syntax error at EOI')
